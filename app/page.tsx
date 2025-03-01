@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState, useEffect } from 'react';
@@ -9,6 +10,8 @@ export default function Home() {
   // State for featured games carousel
   const [activeSlide, setActiveSlide] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
+  // New state for SVG lines
+  const [svgLines, setSvgLines] = useState([]);
 
   // Featured games data - will be shown in the carousel
   const featuredGames = [
@@ -50,6 +53,26 @@ export default function Home() {
     }
   ];
 
+  // Generate SVG background lines on client-side only
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const lines: any = Array.from({ length: 8 }).map((_, i) => {
+      const startY = 150 + Math.random() * 300;
+      const points = Array.from({ length: 12 }).map((_, j) => {
+        const x = (j / 11) * 100;
+        const yVariance = Math.sin(j * (i + 1) * 0.5) * 20 + Math.random() * 30;
+        return `${x},${startY + yVariance}`;
+      }).join(' ');
+      
+      return {
+        points,
+        stroke: i % 2 === 0 ? "#4F46E5" : "#10B981"
+      };
+    });
+    
+    setSvgLines(lines);
+  }, []);
+
   // Implement auto-advancing carousel
   useEffect(() => {
     let interval: string | number | NodeJS.Timeout | undefined;
@@ -71,7 +94,10 @@ export default function Home() {
   };
 
   // Get a random game for "Quick Play"
-  const getRandomGame = () => {
+  // Using useEffect and state to make this deterministic during initial render
+  const [randomGame, setRandomGame] = useState({ name: "Trading Quiz", path: "/quiz" });
+  
+  useEffect(() => {
     const activeGames = [
       { name: "Trading Quiz", path: "/quiz" },
       { name: "Flexibility Challenge", path: "/flexibility" },
@@ -79,35 +105,24 @@ export default function Home() {
       { name: "Risk Balloon", path: "/risk" },
       { name: "Pattern Sequence", path: "/sequence" }
     ];
-    return activeGames[Math.floor(Math.random() * activeGames.length)];
-  };
-
-  const randomGame = getRandomGame();
+    setRandomGame(activeGames[Math.floor(Math.random() * activeGames.length)]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 relative">
-      {/* Dynamic background with subtle chart lines */}
+      {/* Dynamic background with subtle chart lines - Now client-side rendered */}
       <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
         <svg width="100%" height="100%" className="absolute inset-0" preserveAspectRatio="none">
-          {/* Generate some random "chart lines" for background */}
-          {Array.from({ length: 8 }).map((_, i) => {
-            const startY = 150 + Math.random() * 300;
-            const points = Array.from({ length: 12 }).map((_, j) => {
-              const x = (j / 11) * 100;
-              const yVariance = Math.sin(j * (i + 1) * 0.5) * 20 + Math.random() * 30;
-              return `${x},${startY + yVariance}`;
-            }).join(' ');
-            return (
-              <polyline 
-                key={i}
-                points={points}
-                fill="none"
-                stroke={i % 2 === 0 ? "#4F46E5" : "#10B981"}
-                strokeWidth="2"
-                className="opacity-30"
-              />
-            );
-          })}
+          {svgLines.map((line: any, i) => (
+            <polyline 
+              key={i}
+              points={line.points}
+              fill="none"
+              stroke={line.stroke}
+              strokeWidth="2"
+              className="opacity-30"
+            />
+          ))}
         </svg>
       </div>
 
@@ -350,7 +365,8 @@ export default function Home() {
       
       <footer className="py-6">
         <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-          <p>&copy; {new Date().getFullYear()} Trading Games Platform</p>
+          {/* Use suppressHydrationWarning for the current year which may differ between server and client */}
+          <p suppressHydrationWarning>&copy; {new Date().getFullYear()} Trading Games Platform</p>
         </div>
       </footer>
     </div>
